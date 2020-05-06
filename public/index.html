@@ -1,6 +1,8 @@
 <!doctype html>
 <html>
-  <head></head>
+  <head>
+    <title>requesting...</title>
+  </head>
   <body>
     <style>
       body {
@@ -25,6 +27,7 @@
           return
         }
         const filename = await response.text();
+        document.title = filename
         const fileExtension = filename.split('.').pop().toLowerCase()
         let type
         for (const extension of Object.keys(extensions)) {
