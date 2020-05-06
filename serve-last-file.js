@@ -5,7 +5,8 @@ const pwd = process.env.PWD;
 const Koa = require('koa')
 const getPort = require('get-port')
 const Router = require('koa-router')
-const koaStatic = require('koa-static')
+const statics = require('koa-static')
+const range = require('koa-range')
 const fs = require('fs')
 
 async function main() {
@@ -14,14 +15,25 @@ async function main() {
 
   // app
   const app = new Koa
-  app.use(koaStatic('public'))
+  app.use(range)
+  app.use(statics(__dirname + '/public'))
+  app.use(async function serve(ctx, next) {
+    const path = `${pwd}${decodeURIComponent(ctx.URL.pathname).replace(/\s/g, '\ ')}`;
+    if (fs.existsSync(path)) {
+      const stat = fs.statSync(path)
+      ctx.length = stat.size;
+      ctx.body = fs.createReadStream(path)
+    }
+    else {
+      await next()
+    }
+  })
 
   // router
   const router = new Router
 
   router.get('/last-file', function (ctx) {
-
-    ctx.body = 'not implemented'
+    ctx.body = getLastFile()
   })
 
   app.use(router.routes())
@@ -34,3 +46,18 @@ async function main() {
 
 
 main()
+
+
+
+function getLastFile() {
+  const files = fs.readdirSync(pwd).map(function (filename) {
+    return {
+      filename,
+      stat: fs.statSync(`${pwd}/${filename}`)
+    }
+  }).filter(function filter(file) {
+    return file.stat.isDirectory() === false;
+  });
+  // return the last file
+  return files.sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs)[0].filename;
+}
